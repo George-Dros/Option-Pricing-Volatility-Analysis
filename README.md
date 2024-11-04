@@ -28,29 +28,7 @@ To run this project, you'll need Python and the following libraries:
 - `matplotlib`: For visualizations
 - `yfinance` (optional): To fetch historical stock data
 
-Install the libraries using:
 
-```bash
-pip install numpy scipy matplotlib yfinance
-
-## Setup
-
-Clone the Repository:
-```bash
-git clone https://github.com/yourusername/options-analysis-toolkit.git
-cd options-analysis-toolkit
-
-Open the Jupyter Notebook:
-
-Launch Jupyter and open notebook.ipynb to follow the analysis step-by-step.
-
-Run the Notebook Sections:
-
-    Each section of the notebook focuses on a different component of the analysis:
-        Option Pricing Models: Calculate option prices using Black-Scholes, Binomial Tree, and Monte Carlo models.
-        Implied Volatility and Volatility Smile: Compute implied volatility across strike prices and plot the volatility smile.
-        Delta-Neutral Hedging: Implement Delta-neutral hedging adjustments over time.
-        Volatility-Based Strategy: Set up a mean-reversion strategy based on implied vs. historical volatility.
 
 ##Code Overview
 Key Functions (in functions.py)
@@ -97,3 +75,21 @@ Future Enhancements
     Adding a volatility surface to analyze implied volatility across different maturities.
     Enhancing the backtesting framework to assess the volatility-based strategy over historical data.
     Expanding the toolkit to support more exotic options like Asian or barrier options.
+
+
+Clone the Repository:
+```bash
+git clone https://github.com/yourusername/options-analysis-toolkit.git
+cd options-analysis-toolkit
+
+Open the Jupyter Notebook:
+
+Launch Jupyter and open notebook.ipynb to follow the analysis step-by-step.
+
+Run the Notebook Sections:
+
+    Each section of the notebook focuses on a different component of the analysis:
+        Option Pricing Models: Calculate option prices using Black-Scholes, Binomial Tree, and Monte Carlo models.
+        Implied Volatility and Volatility Smile: Compute implied volatility across strike prices and plot the volatility smile.
+        Delta-Neutral Hedging: Implement Delta-neutral hedging adjustments over time.
+        Volatility-Based Strategy: Set up a mean-reversion strategy based on implied vs. historical volatility.
