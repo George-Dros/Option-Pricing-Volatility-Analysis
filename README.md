@@ -33,13 +33,13 @@ To run this project, you'll need Python and the following libraries:
 ## Code Overview
 Key Functions (in functions.py)
 
-   black_scholes_call(S, K, T, r, sigma): Calculates the Black-Scholes price of a European call option.
-   black_scholes_put(S, K, T, r, sigma): Calculates the Black-Scholes price of a European put option.
-   binomial_tree_option(S, K, T, r, sigma, steps, option_type): Prices an option using the Binomial Tree method.
-   monte_carlo_option_price(S, K, T, r, sigma, n_simulations): Prices an option using Monte Carlo simulation.
-   implied_volatility_call(S, K, T, r, market_price): Uses the Newton-Raphson method to calculate implied volatility for a call option.
-   delta_call(S, K, T, r, sigma): Computes the Delta of a European call option.
-   delta_put(S, K, T, r, sigma): Computes the Delta of a European put option.
+      black_scholes_call(S, K, T, r, sigma): Calculates the Black-Scholes price of a European call option.
+      black_scholes_put(S, K, T, r, sigma): Calculates the Black-Scholes price of a European put option.
+      binomial_tree_option(S, K, T, r, sigma, steps, option_type): Prices an option using the Binomial Tree method.
+      monte_carlo_option_price(S, K, T, r, sigma, n_simulations): Prices an option using Monte Carlo simulation.
+      implied_volatility_call(S, K, T, r, market_price): Uses the Newton-Raphson method to calculate implied volatility for a call option.
+      delta_call(S, K, T, r, sigma): Computes the Delta of a European call option.
+      delta_put(S, K, T, r, sigma): Computes the Delta of a European put option.
 
 ## Strategy Workflow
 
@@ -86,7 +86,7 @@ Open the Jupyter Notebook:
 
 Launch Jupyter and open notebook.ipynb to follow the analysis step-by-step.
 
-Run the Notebook Sections:
+## Run the Notebook Sections:
 
 Each section of the notebook focuses on a different component of the analysis:
 Option Pricing Models: Calculate option prices using Black-Scholes, Binomial Tree, and Monte Carlo models.
