@@ -30,51 +30,51 @@ To run this project, you'll need Python and the following libraries:
 
 
 
-##Code Overview
+## Code Overview
 Key Functions (in functions.py)
 
-    black_scholes_call(S, K, T, r, sigma): Calculates the Black-Scholes price of a European call option.
-    black_scholes_put(S, K, T, r, sigma): Calculates the Black-Scholes price of a European put option.
-    binomial_tree_option(S, K, T, r, sigma, steps, option_type): Prices an option using the Binomial Tree method.
-    monte_carlo_option_price(S, K, T, r, sigma, n_simulations): Prices an option using Monte Carlo simulation.
-    implied_volatility_call(S, K, T, r, market_price): Uses the Newton-Raphson method to calculate implied volatility for a call option.
-    delta_call(S, K, T, r, sigma): Computes the Delta of a European call option.
-    delta_put(S, K, T, r, sigma): Computes the Delta of a European put option.
+   black_scholes_call(S, K, T, r, sigma): Calculates the Black-Scholes price of a European call option.
+   black_scholes_put(S, K, T, r, sigma): Calculates the Black-Scholes price of a European put option.
+   binomial_tree_option(S, K, T, r, sigma, steps, option_type): Prices an option using the Binomial Tree method.
+   monte_carlo_option_price(S, K, T, r, sigma, n_simulations): Prices an option using Monte Carlo simulation.
+   implied_volatility_call(S, K, T, r, market_price): Uses the Newton-Raphson method to calculate implied volatility for a call option.
+   delta_call(S, K, T, r, sigma): Computes the Delta of a European call option.
+   delta_put(S, K, T, r, sigma): Computes the Delta of a European put option.
 
-##Strategy Workflow
+## Strategy Workflow
 
 The volatility-based trading strategy is outlined in the notebook as follows:
 
-    Setup: Define parameters, including stock price, strike price, maturity, and implied volatility.
-    Create Straddle: Buy both a call and a put at the ATM strike price to capture volatility moves without directional risk.
-    Delta-Neutral Hedge: Calculate initial Delta and short the underlying asset to neutralize directional exposure.
-    Daily Monitoring: Adjust Delta hedges as needed over a 30-day horizon.
-    Exit Conditions: Exit when implied volatility reverts to the historical level or the time horizon is reached.
+   Setup: Define parameters, including stock price, strike price, maturity, and implied volatility.
+   Create Straddle: Buy both a call and a put at the ATM strike price to capture volatility moves without directional risk.
+   Delta-Neutral Hedge: Calculate initial Delta and short the underlying asset to neutralize directional exposure.
+   Daily Monitoring: Adjust Delta hedges as needed over a 30-day horizon.
+   Exit Conditions: Exit when implied volatility reverts to the historical level or the time horizon is reached.
 
-##Sample Output
+## Sample Output
 
-    Initial Cost of Straddle (Call + Put): 16.02
-    Initial Delta Hedge: Short 0.27 shares to remain Delta-neutral.
-    Delta Adjustments: Minor adjustments made only when Delta changed significantly.
-    Exit Condition: Position exited after 30 days or when implied volatility reached the historical target.
+   Initial Cost of Straddle (Call + Put): 16.02
+   Initial Delta Hedge: Short 0.27 shares to remain Delta-neutral.
+   Delta Adjustments: Minor adjustments made only when Delta changed significantly.
+   Exit Condition: Position exited after 30 days or when implied volatility reached the historical target.
 
-##Visualization
+## Visualization
 
 The project includes several visualizations:
 
-    Volatility Smile: A plot showing implied volatility across different strike prices.
-    Historical vs. Implied Volatility Comparison: A chart illustrating the difference between market-implied and historical volatilities, highlighting potential trading signals.
+   Volatility Smile: A plot showing implied volatility across different strike prices.
+   Historical vs. Implied Volatility Comparison: A chart illustrating the difference between market-implied and historical volatilities, highlighting potential trading signals.
 
-##Project Summary
+## Project Summary
 
-This toolkit provides a versatile approach to options analysis, combining theoretical pricing models with practical trading strategies. It's designed for anyone interested in understanding options pricing, managing risk through Delta-neutral hedging, and analyzing market sentiment via implied volatility.
-Future Enhancements
+   This toolkit provides a versatile approach to options analysis, combining theoretical pricing models with practical trading strategies. It's designed for anyone interested in understanding options pricing, managing risk through Delta-neutral hedging,     and analyzing market sentiment via implied volatility.
+   Future Enhancements
 
-##Possible improvements for this project include:
+## Possible improvements for this project include:
 
-    Adding a volatility surface to analyze implied volatility across different maturities.
-    Enhancing the backtesting framework to assess the volatility-based strategy over historical data.
-    Expanding the toolkit to support more exotic options like Asian or barrier options.
+   Adding a volatility surface to analyze implied volatility across different maturities.
+   Enhancing the backtesting framework to assess the volatility-based strategy over historical data.
+   Expanding the toolkit to support more exotic options like Asian or barrier options.
 
 
 Clone the Repository:
@@ -88,8 +88,8 @@ Launch Jupyter and open notebook.ipynb to follow the analysis step-by-step.
 
 Run the Notebook Sections:
 
-    Each section of the notebook focuses on a different component of the analysis:
-        Option Pricing Models: Calculate option prices using Black-Scholes, Binomial Tree, and Monte Carlo models.
-        Implied Volatility and Volatility Smile: Compute implied volatility across strike prices and plot the volatility smile.
-        Delta-Neutral Hedging: Implement Delta-neutral hedging adjustments over time.
-        Volatility-Based Strategy: Set up a mean-reversion strategy based on implied vs. historical volatility.
+Each section of the notebook focuses on a different component of the analysis:
+Option Pricing Models: Calculate option prices using Black-Scholes, Binomial Tree, and Monte Carlo models.
+Implied Volatility and Volatility Smile: Compute implied volatility across strike prices and plot the volatility smile.
+Delta-Neutral Hedging: Implement Delta-neutral hedging adjustments over time.
+Volatility-Based Strategy: Set up a mean-reversion strategy based on implied vs. historical volatility.
