@@ -1,6 +1,165 @@
 import numpy as np
+import pandas as pd
+import time
+from datetime import datetime
+import yfinance as yf
+from matplotlib import pyplot as plt
+from yahooquery import Ticker
 from scipy.stats import norm
 
+
+def get_companies():
+    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    table = pd.read_html(url)
+    sp500_df = table[0]
+    sp500_symbols = sp500_df['Symbol'].tolist()
+    tickers = Ticker(sp500_symbols)
+    profiles = tickers.summary_profile
+    profiles_df = pd.DataFrame(profiles).T.reset_index()
+    profiles_df.rename(columns={'index': 'symbol'}, inplace=True)
+
+    return profiles_df
+
+
+def filter_all_companies(companies, marketCap_thresh=50_000_000_000, averageVolume_thresh=10_000_000, start_date="2022-11-16", end_date="2024-11-16"):
+    """
+    Filters companies by market cap and average volume.
+    Fetches historical closing prices for each filtered symbol.
+
+    Parameters:
+    - companies: DataFrame containing company data, including 'sector' and 'symbol'.
+    - marketCap_thresh: Minimum market capitalization (default is 2 billion).
+    - averageVolume_thresh: Minimum average volume (default is 5 million).
+    - start_date: Start date for historical data.
+    - end_date: End date for historical data.
+    """
+    # Get the list of all company symbols
+    all_symbols = companies['symbol'].tolist()
+
+    filtered_symbols = []
+    for symbol in all_symbols:
+        try:
+            # Fetch ticker info with error handling
+            ticker_info = yf.Ticker(symbol).info
+
+            # Check if data exists and if marketCap and averageVolume thresholds are met
+            market_cap = ticker_info.get("marketCap")
+            average_volume = ticker_info.get("averageVolume")
+            if market_cap is not None and market_cap > marketCap_thresh and \
+                    average_volume is not None and average_volume > averageVolume_thresh:
+                filtered_symbols.append(symbol)
+        except Exception as e:
+            # Print or log error message for the symbol
+            print(f"Error fetching data for {symbol}: {e}")
+
+
+    # Initialize an empty DataFrame to store the historical closing prices
+    filtered_symbols_df = pd.DataFrame()
+
+    # Fetch historical data for each filtered symbol
+    for symbol in filtered_symbols:
+        try:
+            ticker = yf.Ticker(symbol)
+            historical_data = ticker.history(start=start_date, end=end_date)
+            # Store the 'Close' prices in the DataFrame
+            filtered_symbols_df[symbol] = historical_data['Close']
+        except Exception as e:
+            # Print or log error message for the symbol if historical data cannot be fetched
+            print(f"Error fetching historical data for {symbol}: {e}")
+
+
+    return filtered_symbols_df
+
+
+
+def calculate_time_to_expiration(expiration_date_str: str) -> float:
+    """
+    Calculate the time to expiration in years from today.
+
+    Parameters:
+    expiration_date_str (str): Expiration date in the format 'YYYY-MM-DD'
+
+    Returns:
+    float: Time to expiration in years (non-negative)
+    """
+    # Parse the expiration date string to a datetime object
+    expiration_date = datetime.strptime(expiration_date_str, "%Y-%m-%d")
+
+    # Get the current datetime
+    current_datetime = datetime.now()
+
+    # Calculate the time difference in seconds
+    time_diff_seconds = (expiration_date - current_datetime).total_seconds()
+
+    # Ensure time difference is non-negative
+    if time_diff_seconds <= 0:
+        # Option has expired or expires today; set T to a minimal positive value or filter out
+        T = 1 / 365.0  # One day in years
+    else:
+        # Convert seconds to years
+        T = time_diff_seconds / (365.0 * 24 * 60 * 60)  # Total seconds in a year
+
+    return T
+
+
+def get_option_chains_spot(ticker_symbol, retries=3, delay=2):
+    # Fetch the ticker data
+    ticker = yf.Ticker(ticker_symbol)
+    for attempt in range(retries):
+        try:
+            # Get the historical spot price
+            history = ticker.history(period="1d")
+
+            # Check if the history DataFrame is empty
+            if history.empty:
+                raise ValueError(f"No historical data available for ticker {ticker_symbol}.")
+
+            # Get the spot price from the history DataFrame
+            spot_price = history["Close"].iloc[0]
+
+            # Get expiration dates
+            expiration_dates = ticker.options  # Expiration dates
+
+            # Fetch call and put options for each expiration date
+            calls_dict = {date: ticker.option_chain(date).calls for date in expiration_dates}
+            puts_dict = {date: ticker.option_chain(date).puts for date in expiration_dates}
+
+            # Add expiration column to each DataFrame in calls_dict and puts_dict
+            for date, df in calls_dict.items():
+                df['expiration'] = date
+
+            for date, df in puts_dict.items():
+                df['expiration'] = date
+
+            # Concatenate all DataFrames from calls_dict and puts_dict
+            calls_all = pd.concat(calls_dict.values(), ignore_index=True)
+            puts_all = pd.concat(puts_dict.values(), ignore_index=True)
+
+            # For calls_all DataFrame
+            calls_all = calls_all[["strike", "lastPrice", "impliedVolatility", "expiration"]]
+            calls_all["time_to_expiration"] = calls_all["expiration"].apply(calculate_time_to_expiration)
+            calls_all = calls_all[calls_all["time_to_expiration"] > 0.0]
+            calls_all = calls_all.reset_index(drop=True)
+
+            # For puts_all DataFrame
+            puts_all = puts_all[["strike", "lastPrice", "impliedVolatility", "expiration"]]
+            puts_all["time_to_expiration"] = puts_all["expiration"].apply(calculate_time_to_expiration)
+            puts_all = puts_all[puts_all["time_to_expiration"] > 0.0]
+            puts_all = puts_all.reset_index(drop=True)
+
+            # If successful, return the data
+            return calls_all, puts_all, spot_price
+
+        except (IndexError, ValueError) as e:
+            # Print a warning and retry after a delay
+            print(f"Attempt {attempt + 1} failed with error: {e} - Retrying after {delay} seconds...")
+            time.sleep(delay)
+
+    # If all retries fail, raise an error
+    raise ValueError(f"Failed to get spot price and options data for ticker {ticker_symbol} after {retries} attempts.")
+    
+    
+    
 def black_scholes_call(S, K, T, r, sigma):
     """
     Calculate the Black-Scholes price for a European call option.
@@ -74,187 +233,4 @@ def rho_call(S, K, T, r, sigma):
 def rho_put(S, K, T, r, sigma):
     d2 = (np.log(S / K) + (r - 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     return -K * T * np.exp(-r * T) * norm.cdf(-d2)
-
-
-def binomial_tree_call(S0, K, T, r, sigma, steps, american=False):
-    dt = T / steps
-    u = np.exp(sigma * np.sqrt(dt))
-    d = 1 / u
-    p = (np.exp(r * dt) - d) / (u - d)
-
-    # Initialize stock price tree
-    stock_prices = np.zeros((steps + 1, steps + 1))
-    stock_prices[0, 0] = S0
-
-    for i in range(1, steps + 1):
-        stock_prices[i, 0] = stock_prices[i - 1, 0] * u
-        for j in range(1, i + 1):
-            stock_prices[i, j] = stock_prices[i - 1, j - 1] * d
-
-    # Initialize option value tree
-    option_values = np.zeros((steps + 1, steps + 1))
-    for j in range(steps + 1):
-        option_values[steps, j] = max(0, stock_prices[steps, j] - K)  # payoff for call option
-
-    # Work backwards
-    for i in range(steps - 1, -1, -1):
-        for j in range(i + 1):
-            hold_value = np.exp(-r * dt) * (p * option_values[i + 1, j] + (1 - p) * option_values[i + 1, j + 1])
-            if american:
-                exercise_value = max(0, stock_prices[i, j] - K)
-                option_values[i, j] = max(hold_value, exercise_value)
-            else:
-                option_values[i, j] = hold_value
-
-    return option_values[0, 0]  # Return the option value at the root
-
-
-def binomial_tree_put(S0, K, T, r, sigma, steps, american=False):
-    dt = T / steps
-    u = np.exp(sigma * np.sqrt(dt))
-    d = 1 / u
-    p = (np.exp(r * dt) - d) / (u - d)
-
-    # Initialize stock price tree
-    stock_prices = np.zeros((steps + 1, steps + 1))
-    stock_prices[0, 0] = S0
-
-    for i in range(1, steps + 1):
-        stock_prices[i, 0] = stock_prices[i - 1, 0] * u
-        for j in range(1, i + 1):
-            stock_prices[i, j] = stock_prices[i - 1, j - 1] * d
-
-    # Initialize option value tree for put options
-    option_values = np.zeros((steps + 1, steps + 1))
-    for j in range(steps + 1):
-        option_values[steps, j] = max(0, K - stock_prices[steps, j])  # payoff for put option
-
-    # Work backwards through the tree
-    for i in range(steps - 1, -1, -1):
-        for j in range(i + 1):
-            hold_value = np.exp(-r * dt) * (p * option_values[i + 1, j] + (1 - p) * option_values[i + 1, j + 1])
-            if american:
-                exercise_value = max(0, K - stock_prices[i, j])
-                option_values[i, j] = max(hold_value, exercise_value)
-            else:
-                option_values[i, j] = hold_value
-
-    return option_values[0, 0]  # Return the option value at the root
-
-import numpy as np
-
-def monte_carlo_option_price_antithetic(S0, K, T, r, sigma, n_simulations=10000, steps=100):
-    dt = T / steps
-    payoffs = []
-
-    for _ in range(n_simulations // 2):  # Halve the number of loops for pairs
-        S_t1, S_t2 = S0, S0  # Generate two paths, one regular and one antithetic
-        for _ in range(steps):
-            Z = np.random.normal()
-            S_t1 = S_t1 * np.exp((r - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z)
-            S_t2 = S_t2 * np.exp((r - 0.5 * sigma**2) * dt - sigma * np.sqrt(dt) * Z)
-        
-        # Average payoff from both paths
-        payoffs.append(0.5 * (max(S_t1 - K, 0) + max(S_t2 - K, 0)))
     
-    # Calculate the average payoff and discount to present
-    option_price = np.exp(-r * T) * np.mean(payoffs)
-    return option_price
-
-def monte_carlo_asian_call(S0, K, T, r, sigma, n_simulations=10000, steps=100):
-    dt = T / steps
-    payoffs = []
-
-    for _ in range(n_simulations):
-        # Initialize the price path
-        S_t = S0
-        path = [S_t]
-        
-        # Simulate the path over the specified number of steps
-        for _ in range(steps):
-            Z = np.random.normal()
-            S_t = S_t * np.exp((r - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z)
-            path.append(S_t)
-        
-        # Calculate the average price over the path
-        avg_price = np.mean(path)
-        
-        # Calculate the payoff for an Asian call option
-        payoffs.append(max(avg_price - K, 0))
-    
-    # Calculate the average payoff and discount it back to the present value
-    option_price = np.exp(-r * T) * np.mean(payoffs)
-    return option_price
-
-def monte_carlo_asian_put(S0, K, T, r, sigma, n_simulations=10000, steps=100):
-    dt = T / steps
-    payoffs = []
-
-    for _ in range(n_simulations):
-        # Initialize the price path
-        S_t = S0
-        path = [S_t]
-        
-        # Simulate the path over the specified number of steps
-        for _ in range(steps):
-            Z = np.random.normal()
-            S_t = S_t * np.exp((r - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z)
-            path.append(S_t)
-        
-        # Calculate the average price over the path
-        avg_price = np.mean(path)
-        
-        # Calculate the payoff for an Asian put option
-        payoffs.append(max(K - avg_price, 0))
-    
-    # Calculate the average payoff and discount it back to the present value
-    option_price = np.exp(-r * T) * np.mean(payoffs)
-    return option_price
-
-def monte_carlo_european_put_antithetic(S0, K, T, r, sigma, n_simulations=10000, steps=100):
-    dt = T / steps
-    payoffs = []
-
-    for _ in range(n_simulations // 2):  # Halve the number of loops for paired antithetic paths
-        S_t1, S_t2 = S0, S0  # Two paths: one regular, one antithetic
-        for _ in range(steps):
-            Z = np.random.normal()
-            S_t1 = S_t1 * np.exp((r - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z)
-            S_t2 = S_t2 * np.exp((r - 0.5 * sigma**2) * dt - sigma * np.sqrt(dt) * Z)
-        
-        # Calculate the payoff for a European put option at maturity
-        payoff1 = max(K - S_t1, 0)
-        payoff2 = max(K - S_t2, 0)
-        
-        # Average the payoff from the paired paths
-        payoffs.append(0.5 * (payoff1 + payoff2))
-    
-    # Calculate the average payoff and discount it back to the present
-    option_price = np.exp(-r * T) * np.mean(payoffs)
-    return option_price
-
-def implied_volatility_call(S, K, T, r, market_price, tol=1e-5, max_iterations=100):
-    """Calculate the implied volatility of a European call option using the Newton-Raphson method."""
-    sigma = 0.2  # Initial guess for volatility
-    min_sigma = 1e-4  # Minimum threshold to avoid division by zero
-    
-    for i in range(max_iterations):
-        # Calculate price with current sigma
-        price = black_scholes_call(S, K, T, r, sigma)
-        
-        # Calculate Vega (the derivative of the option price with respect to volatility)
-        d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
-        vega = S * norm.pdf(d1) * np.sqrt(T)
-        
-        # Update sigma using Newton-Raphson method
-        price_diff = price - market_price
-        if abs(price_diff) < tol:
-            return sigma  # Converged to a solution
-        sigma -= price_diff / vega  # Update rule for Newton-Raphson
-        
-        # Ensure sigma does not fall below the minimum threshold
-        sigma = max(sigma, min_sigma)
-    
-    # If no convergence, return NaN to indicate failure
-    return np.nan
-
